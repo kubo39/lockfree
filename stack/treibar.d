@@ -21,9 +21,9 @@ shared class Stack(T)
 
     shared(T)* pop() @property
     {
-        auto head = this.head.atomicLoad!(MemoryOrder.acq);
         while (true)
         {
+            auto head = this.head.atomicLoad!(MemoryOrder.acq);
             if (head is null)
                 return null;
             auto next = head.next.atomicLoad!(MemoryOrder.acq);
