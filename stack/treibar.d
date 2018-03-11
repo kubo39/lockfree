@@ -4,37 +4,34 @@ shared class Stack(T)
 {
     bool empty() const @property
     {
-        return (this.head.atomicLoad!(MemoryOrder.acq) is null);
+        return this.head.atomicLoad!(MemoryOrder.acq) is null;
     }
 
     void push(T value)
     {
-        auto node = new shared(Node)(value, null);
-        auto head = this.head.atomicLoad!(MemoryOrder.acq);
-        while (true)
-        {
-            atomicStore!(MemoryOrder.raw)(node.next, head);
-            if (cas(&this.head, head, node))
-                break;
-        }
+        auto newHead = new shared Node(value, null);
+        shared Node* oldHead;
+        do {
+            oldHead = head.atomicLoad!(MemoryOrder.raw);
+            newHead.next = oldHead;
+        } while (!cas(&this.head, oldHead, newHead));
     }
 
     shared(T)* pop() @property
     {
-        while (true)
-        {
-            auto head = this.head.atomicLoad!(MemoryOrder.acq);
-            if (head is null)
+        shared Node* oldHead, newHead;
+        do {
+            oldHead = head.atomicLoad!(MemoryOrder.acq);
+            if (oldHead is null)
                 return null;
-            auto next = head.next.atomicLoad!(MemoryOrder.acq);
-            if (cas(&this.head, head, next))
-                return &head.value;
-        }
+            newHead = oldHead.next;
+        } while (!cas(&this.head, oldHead, newHead));
+        return &oldHead.value;
     }
 
 private:
 
-    shared struct Node
+    struct Node
     {
         T value;
         Node* next;
