@@ -31,7 +31,7 @@ shared class Stack(T)
 
 private:
 
-    struct Node
+    align(64) struct Node
     {
         T value;
         Node* next;
